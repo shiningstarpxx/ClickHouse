@@ -29,10 +29,8 @@ struct PrewhereInfo
     bool remove_prewhere_column = false;
 
     PrewhereInfo() = default;
-    explicit PrewhereInfo(ExpressionActionsPtr alias_actions_, ExpressionActionsPtr prewhere_actions_, String prewhere_column_name_)
-        : alias_actions(std::move(alias_actions_))
-        , prewhere_actions(std::move(prewhere_actions_))
-        , prewhere_column_name(std::move(prewhere_column_name_)) {}
+    explicit PrewhereInfo(ExpressionActionsPtr prewhere_actions_, String prewhere_column_name_)
+        : prewhere_actions(std::move(prewhere_actions_)), prewhere_column_name(std::move(prewhere_column_name_)) {}
 };
 
 using PrewhereInfoPtr = std::shared_ptr<PrewhereInfo>;
