@@ -658,7 +658,8 @@ void InterpreterSelectQuery::executeFetchColumns(
                     if (!prewhere_sample_block.has(column))
                         columns_removed_by_prewhere.insert(column);
 
-                if (prewhere_info->remove_prewhere_column)
+                if (prewhere_info->remove_prewhere_column
+                    && required_columns.end() != std::find(required_columns.begin(), required_columns.end(), prewhere_info->prewhere_column_name))
                     columns_removed_by_prewhere.insert(prewhere_info->prewhere_column_name);
             }
 
