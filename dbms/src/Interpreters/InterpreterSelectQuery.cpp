@@ -647,11 +647,27 @@ void InterpreterSelectQuery::executeFetchColumns(
 
         if (alias_columns_required)
         {
+            /// Collect columns which will be removed after prewhere actions execution.
+            NameSet columns_removed_by_prewhere;
+            if (prewhere_info->prewhere_actions)
+            {
+                auto required_prewhere_columns = prewhere_info->prewhere_actions->getRequiredColumns();
+
+                auto prewhere_sample_block = prewhere_info->prewhere_actions->getSampleBlock();
+                for (auto & column : required_prewhere_columns)
+                    if (!prewhere_sample_block.has(column))
+                        columns_removed_by_prewhere.insert(column);
+            }
+
             /// We will create an expression to return all the requested columns, with the calculation of the required ALIAS columns.
             auto required_columns_expr_list = std::make_shared<ASTExpressionList>();
 
             for (const auto & column : required_columns)
             {
+                /// Won't project columns which we don't need further.
+                if (!columns_removed_by_prewhere.empty() && columns_removed_by_prewhere.count(column))
+                    continue;
+
                 const auto default_it = column_defaults.find(column);
                 if (default_it != std::end(column_defaults) && default_it->second.kind == ColumnDefaultKind::Alias)
                     required_columns_expr_list->children.emplace_back(setAlias(default_it->second.expression->clone(), column));
