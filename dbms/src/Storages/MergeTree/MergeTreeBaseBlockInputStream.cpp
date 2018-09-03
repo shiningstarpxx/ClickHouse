@@ -218,6 +218,9 @@ void MergeTreeBaseBlockInputStream::executePrewhereActions(Block & block, const 
 {
     if (prewhere_info)
     {
+        if (prewhere_info->alias_actions)
+            prewhere_info->alias_actions->execute(block);
+
         prewhere_info->prewhere_actions->execute(block);
         if (prewhere_info->remove_prewhere_column)
             block.erase(prewhere_info->prewhere_column_name);

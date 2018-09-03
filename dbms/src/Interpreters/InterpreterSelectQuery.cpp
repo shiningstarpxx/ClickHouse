@@ -649,9 +649,11 @@ void InterpreterSelectQuery::executeFetchColumns(
         {
             /// Collect columns which will be removed after prewhere actions execution.
             NameSet columns_removed_by_prewhere;
-            if (prewhere_info->prewhere_actions)
+            NameSet required_prewhere_columns;
+            if (prewhere_info)
             {
-                auto required_prewhere_columns = prewhere_info->prewhere_actions->getRequiredColumns();
+                auto required_columns = prewhere_info->prewhere_actions->getRequiredColumns();
+                required_prewhere_columns.insert(required_columns.begin(), required_columns.end());
 
                 auto prewhere_sample_block = prewhere_info->prewhere_actions->getSampleBlock();
                 for (auto & column : required_prewhere_columns)
@@ -665,25 +667,34 @@ void InterpreterSelectQuery::executeFetchColumns(
 
             /// We will create an expression to return all the requested columns, with the calculation of the required ALIAS columns.
             auto required_columns_expr_list = std::make_shared<ASTExpressionList>();
+            auto required_prewhere_columns_expr_list = std::make_shared<ASTExpressionList>();
 
             for (const auto & column : required_columns)
             {
-                /// Won't project columns which we don't need further.
-                if (!columns_removed_by_prewhere.empty() && columns_removed_by_prewhere.count(column))
-                    continue;
-
+                ASTPtr column_expr;
                 const auto default_it = column_defaults.find(column);
                 if (default_it != std::end(column_defaults) && default_it->second.kind == ColumnDefaultKind::Alias)
-                    required_columns_expr_list->children.emplace_back(setAlias(default_it->second.expression->clone(), column));
+                    column_expr = setAlias(default_it->second.expression->clone(), column);
                 else
-                    required_columns_expr_list->children.emplace_back(std::make_shared<ASTIdentifier>(column));
+                    column_expr = std::make_shared<ASTIdentifier>(column);
+
+                if (required_prewhere_columns.count(column))
+                    required_prewhere_columns_expr_list->children.emplace_back(std::move(column_expr));
+                else
+                    required_columns_expr_list->children.emplace_back(std::move(column_expr));
             }
 
             alias_actions = ExpressionAnalyzer(required_columns_expr_list, context, storage).getActions(true);
 
             /// The set of required columns could be added as a result of adding an action to calculate ALIAS.
             required_columns = alias_actions->getRequiredColumns();
-            required_columns.insert(required_columns.end(), columns_removed_by_prewhere.begin(), columns_removed_by_prewhere.end());
+
+            if (prewhere_info)
+            {
+                prewhere_info->alias_actions = ExpressionAnalyzer(required_prewhere_columns_expr_list, context, storage).getActions(true);
+                auto prewhere_required_columns = prewhere_info->alias_actions->getRequiredColumns();
+                required_columns.insert(required_columns.end(), prewhere_required_columns.begin(), prewhere_required_columns.end());
+            }
         }
     }
 

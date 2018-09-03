@@ -21,14 +21,18 @@ using PreparedSets = std::unordered_map<StringRange, SetPtr, StringRangePointers
 
 struct PrewhereInfo
 {
+    /// Ections which are executed in order to alias columns are used for prewhere actions.
+    ExpressionActionsPtr alias_actions;
     /// Actions which are executed on block in order to get filter column for prewhere step.
     ExpressionActionsPtr prewhere_actions;
     String prewhere_column_name;
     bool remove_prewhere_column = false;
 
     PrewhereInfo() = default;
-    explicit PrewhereInfo(ExpressionActionsPtr prewhere_actions_, String prewhere_column_name_)
-            : prewhere_actions(std::move(prewhere_actions_)), prewhere_column_name(std::move(prewhere_column_name_)) {}
+    explicit PrewhereInfo(ExpressionActionsPtr alias_actions_, ExpressionActionsPtr prewhere_actions_, String prewhere_column_name_)
+        : alias_actions(std::move(alias_actions_))
+        , prewhere_actions(std::move(prewhere_actions_))
+        , prewhere_column_name(std::move(prewhere_column_name_)) {}
 };
 
 using PrewhereInfoPtr = std::shared_ptr<PrewhereInfo>;
