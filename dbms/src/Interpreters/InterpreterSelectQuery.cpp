@@ -657,6 +657,9 @@ void InterpreterSelectQuery::executeFetchColumns(
                 for (auto & column : required_prewhere_columns)
                     if (!prewhere_sample_block.has(column))
                         columns_removed_by_prewhere.insert(column);
+
+                if (prewhere_info->remove_prewhere_column)
+                    columns_removed_by_prewhere.insert(prewhere_info->prewhere_column_name);
             }
 
             /// We will create an expression to return all the requested columns, with the calculation of the required ALIAS columns.
@@ -679,6 +682,7 @@ void InterpreterSelectQuery::executeFetchColumns(
 
             /// The set of required columns could be added as a result of adding an action to calculate ALIAS.
             required_columns = alias_actions->getRequiredColumns();
+            required_columns.insert(columns_removed_by_prewhere.begin(), columns_removed_by_prewhere.end());
         }
     }
 
