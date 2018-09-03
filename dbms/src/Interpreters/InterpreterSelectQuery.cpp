@@ -682,7 +682,7 @@ void InterpreterSelectQuery::executeFetchColumns(
 
             /// The set of required columns could be added as a result of adding an action to calculate ALIAS.
             required_columns = alias_actions->getRequiredColumns();
-            required_columns.insert(columns_removed_by_prewhere.begin(), columns_removed_by_prewhere.end());
+            required_columns.insert(required_columns.end(), columns_removed_by_prewhere.begin(), columns_removed_by_prewhere.end());
         }
     }
 
